@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import select
 import sys
@@ -61,7 +62,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--gello-port", required=True)
     parser.add_argument("--hostname", default="127.0.0.1")
     parser.add_argument("--robot-port", type=int, default=6001)
-    parser.add_argument("--hz", type=float, default=50.0)
+    parser.add_argument(
+        "--hz",
+        type=float,
+        default=50.0,
+        help="teleoperation and raw sampling frequency in Hz (default: 50)",
+    )
     parser.add_argument(
         "--start-joints",
         type=float,
@@ -97,8 +103,8 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _validate_args(args: argparse.Namespace) -> None:
-    if args.hz <= 0:
-        raise SystemExit("--hz must be positive")
+    if not math.isfinite(args.hz) or args.hz <= 0:
+        raise SystemExit("--hz must be a positive finite value")
     if args.max_start_error_rad <= 0:
         raise SystemExit("--max-start-error-rad must be positive")
     if not 0 < args.transition_step_rad <= 0.05:
