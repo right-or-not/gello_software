@@ -81,6 +81,11 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-command-step-rad", type=float, default=1.0)
     parser.add_argument("--absolute-leader", action="store_true")
     parser.add_argument("--raw-data-root", type=Path, required=True)
+    parser.add_argument(
+        "--session-path-file",
+        type=Path,
+        help="atomically write the created raw session path for an outer launcher",
+    )
     parser.add_argument("--task", default="PiPER-X GELLO teleoperation")
     parser.add_argument("--record-queue-size", type=int, default=500)
     parser.add_argument(
@@ -211,6 +216,14 @@ def run(args: argparse.Namespace) -> None:
             task=args.task,
             queue_size=args.record_queue_size,
         )
+        if args.session_path_file is not None:
+            path_file = args.session_path_file.resolve()
+            path_file.parent.mkdir(parents=True, exist_ok=True)
+            temporary = path_file.with_suffix(path_file.suffix + ".partial")
+            temporary.write_text(
+                str(recorder.session_dir.resolve()) + "\n", encoding="utf-8"
+            )
+            os.replace(temporary, path_file)
         print(f"原始数据 session: {recorder.session_dir}")
         print("GELLO 跟随已启动；R=开始，S=保存，D=丢弃，P=状态，H=帮助，Ctrl+C=退出")
         if args.start_recording:

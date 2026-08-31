@@ -568,7 +568,7 @@ class DynamixelDriver(DynamixelDriverProtocol):
 
             # Check for processes using the port
             result = subprocess.run(
-                ["lsof", self._port], capture_output=True, text=True
+                ["lsof", self._port], capture_output=True, text=True, timeout=1.0
             )
 
             if result.returncode == 0:
@@ -578,6 +578,9 @@ class DynamixelDriver(DynamixelDriverProtocol):
                     for line in lines[1:]:
                         print(f"  {line}")
                     return False
+            return True
+        except subprocess.TimeoutExpired:
+            print(f"Warning: timed out while checking whether {self._port} is busy")
             return True
         except Exception as e:
             print(f"Error checking port availability: {e}")
@@ -623,8 +626,15 @@ class DynamixelDriver(DynamixelDriverProtocol):
             return
 
         self._stop_thread.set()
-        self._reading_thread.join()
+        # A sync read can still be waiting for its packet timeout.  Never make
+        # shutdown wait forever (especially while handling Ctrl+C).
+        self._reading_thread.join(timeout=2.0)
         self._portHandler.closePort()
+        if self._reading_thread.is_alive():
+            # Closing the serial descriptor unblocks a read that outlived the
+            # normal packet timeout.  The thread is daemonized, so a final
+            # bounded wait is sufficient for process shutdown.
+            self._reading_thread.join(timeout=1.0)
 
 
 def main():

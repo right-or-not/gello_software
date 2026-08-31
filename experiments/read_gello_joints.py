@@ -80,16 +80,21 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     # JSON 模式下把驱动初始化信息送到 stderr，确保 stdout 只有 JSON 数据。
     output = sys.stderr if args.json else sys.stdout
-    with contextlib.redirect_stdout(output):
-        driver = DynamixelDriver(
-            motor_ids,
-            port=args.gello_port,
-            baudrate=args.baudrate,
-            use_fake_fallback=False,
-        )
-        try:
+    driver: DynamixelDriver | None = None
+    try:
+        with contextlib.redirect_stdout(output):
+            driver = DynamixelDriver(
+                motor_ids,
+                port=args.gello_port,
+                baudrate=args.baudrate,
+                use_fake_fallback=False,
+            )
             positions = _map_joint_state(driver.get_joints(), config)
-        finally:
+    except KeyboardInterrupt:
+        print("GELLO read cancelled by user", file=sys.stderr)
+        return 130
+    finally:
+        if driver is not None:
             driver.close()
 
     if args.json:
