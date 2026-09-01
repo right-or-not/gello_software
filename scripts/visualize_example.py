@@ -1,13 +1,12 @@
 import time
-from pathlib import Path
-
 import mujoco
 import mujoco.viewer
 
+from gello.paths import menagerie_root
+
 
 def main():
-    _PROJECT_ROOT: Path = Path(__file__).parent.parent
-    _MENAGERIE_ROOT: Path = _PROJECT_ROOT / "third_party" / "mujoco_menagerie"
+    _MENAGERIE_ROOT = menagerie_root()
     xml = _MENAGERIE_ROOT / "franka_emika_panda" / "panda.xml"
 
     # xml = _MENAGERIE_ROOT / "universal_robots_ur5e" / "ur5e.xml"

@@ -29,7 +29,7 @@ def run_docker_container():
         "gello:latest",
         "bash",
         "-c",
-        "pip install -e third_party/DynamixelSDK/python && exec bash",
+        "uv sync --frozen && exec bash",
     ]
 
     subprocess.run(cmd)

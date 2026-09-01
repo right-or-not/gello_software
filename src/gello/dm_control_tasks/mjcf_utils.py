@@ -1,13 +1,10 @@
-from pathlib import Path
 from typing import List
 
 from dm_control import mjcf
+from gello.paths import menagerie_root
 
-# Path to the root of the project.
-_PROJECT_ROOT: Path = Path(__file__).parent.parent.parent
-
-# Path to the Menagerie submodule.
-MENAGERIE_ROOT: Path = _PROJECT_ROOT / "third_party" / "mujoco_menagerie"
+# Path to the Menagerie asset checkout.
+MENAGERIE_ROOT = menagerie_root()
 
 
 def safe_find_all(

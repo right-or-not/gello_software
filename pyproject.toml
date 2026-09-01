@@ -1,0 +1,46 @@
+[project]
+name = "gello"
+version = "0.1.0"
+description = "GELLO teleoperation and PiPER-X data collection software"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+license = { file = "LICENSE" }
+authors = [{ name = "Philipp Wu" }]
+dependencies = [
+    "dynamixel-sdk==4.0.5",
+    "numpy>=1.26",
+    "omegaconf==2.3.0",
+    "pyyaml>=6.0",
+    "pyzmq>=26.0",
+    "termcolor>=2.4",
+    "tyro>=0.9",
+]
+
+[project.optional-dependencies]
+camera = ["pillow>=10", "pyrealsense2>=2.55"]
+simulation = ["dm-control>=1.0.20", "mujoco>=3.2", "numpy-quaternion>=2024.0", "pin==3.7.0", "pygame>=2.6", "pyqt6>=6.7"]
+robots = ["pyspacemouse>=1.1", "pure-python-adb>=0.3.0.dev0", "ur-rtde>=1.6", "xarm-python-sdk>=1.14"]
+full = ["dm-control>=1.0.20", "mujoco>=3.2", "numpy-quaternion>=2024.0", "pillow>=10", "pin==3.7.0", "pure-python-adb>=0.3.0.dev0", "pygame>=2.6", "pyqt6>=6.7", "pyrealsense2>=2.55", "pyspacemouse>=1.1", "ur-rtde>=1.6", "xarm-python-sdk>=1.14"]
+
+[project.scripts]
+gello = "gello.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.3", "ruff>=0.9"]
+
+[build-system]
+requires = ["uv_build>=0.8,<0.9"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.uv]
+package = true

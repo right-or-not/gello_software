@@ -1,139 +1,145 @@
 # gello_software
 
-`gello_software` 是 GELLO 主手的软件项目。本仓库在上游 GELLO 的基础上增加了七自由度 GELLO 状态读取、AgileX PiPER-X 与 AGX 夹爪遥操作、JS 定位和原始数据记录功能。GELLO 通过 FTDI 串口与 Dynamixel 舵机通信，PiPER-X 扩展则通过 ZMQ 连接独立运行的 `agilexrobotics` 服务。
+`gello_software` 是 GELLO 主手的独立软件项目。本仓库在上游 GELLO 的基础上增加了七自由度状态读取、AgileX PiPER-X 遥操作、JS 定位和原始数据记录，并使用 uv 统一管理 Python、依赖、虚拟环境、锁文件和命令行入口。
 
 > [!WARNING]
-> GELLO 状态读取本身不会移动从臂，但跟随、定位和记录脚本会向真实机械臂发送命令。运行硬件控制前必须固定机械臂、清空工作空间、确保急停按钮触手可及，并先完成本 README 中的只读 GELLO 验证。
+> `read` 只读取 GELLO，但 `follow`、`follow-record`、`movejs` 以及部分官方工作流会向真实机械臂发送命令。运行前必须固定设备、清空工作空间并确保急停按钮触手可及。
 
-## （1）文档导航
+## （1）项目能力
 
-- [开发与调试手册](docs/DEVELOPMENT.md)：本仓库扩展、全部脚本参数、PiPER-X 联调、数据映射和故障排查
-- [上游官方 README](docs/README_OFFICIAL.md)：原始 GELLO 项目的硬件、机器人和通用工作流说明
+- 通过 FTDI/Dynamixel Protocol 2.0 读取 GELLO J1～J6 与夹爪位置
+- 通过 ZMQ 连接 `agilexrobotics`，控制 PiPER-X 六轴与 AGX 夹爪
+- 以指定 `--hz` 运行跟随和原始 JSONL 数据记录
+- 支持上游 YAML、ZMQ、相机和 MuJoCo 工作流
+- 统一使用 `uv run gello COMMAND [OPTIONS]`，不再直接维护每个实验脚本的 Python 启动方式
+
+详细实现、参数含义和故障排查见[开发与调试手册](docs/DEVELOPMENT.md)，上游原始说明保存在[官方 README](docs/README_OFFICIAL.md)，该文件不随本地架构调整而修改。
 
 ## （2）环境要求
 
-- Ubuntu 或其他可访问 USB 串口的 Linux 系统
-- Python 3.11（项目通过 `.python-version` 指定）
-- Git、uv 和基础编译工具
-- GELLO 主手、稳定供电和 FTDI/Dynamixel 串口适配器
-- PiPER-X 跟随功能还需要同级的 `agilexrobotics` 项目及可用的 USB-CAN；只读取 GELLO 时不需要连接 PiPER-X
+- Ubuntu 22.04 或更新版本
+- Git、curl、USB 串口访问权限和基础编译工具
+- Python 3.11；`.python-version` 固定项目版本
+- uv
+- GELLO 主手及 FTDI/Dynamixel 串口适配器
+- PiPER-X 功能额外需要独立的 `agilexrobotics` 服务与 USB-CAN
+- 仿真功能额外需要 MuJoCo Menagerie 资产 submodule
 
 ## （3）快速开始
 
-### 1. 安装系统工具
-
-在 Ubuntu 上执行：
+### 1. 安装系统工具与 uv
 
 ```bash
 sudo apt update
 sudo apt install -y git curl build-essential
-```
-
-如果尚未安装 uv，可使用官方安装脚本：
-
-```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source "$HOME/.local/bin/env"
 uv --version
 ```
 
-其他安装方式见 [uv 官方文档](https://docs.astral.sh/uv/getting-started/installation/)。
-
 ### 2. 获取项目
 
-使用 SSH：
+不使用仿真时，普通 clone 即可：
 
 ```bash
 git clone git@github.com:right-or-not/gello_software.git
 cd gello_software
 ```
 
-未配置 GitHub SSH 密钥时可使用 HTTPS：
+需要 MuJoCo 仿真时，一并拉取 Menagerie：
 
 ```bash
-git clone https://github.com/right-or-not/gello_software.git
+git clone --recurse-submodules git@github.com:right-or-not/gello_software.git
 cd gello_software
 ```
 
-### 3. 创建虚拟环境并安装依赖
+已经 clone 的仓库可在之后补充资产：
 
-本项目使用 `requirements.txt` 和 `setup.py`，没有 `pyproject.toml` 或 uv 锁文件。先创建 Python 3.11 虚拟环境，再安装依赖和当前项目：
+```bash
+git submodule update --init --recursive
+```
+
+DynamixelSDK 已作为锁定的 uv/PyPI 依赖安装，不再需要手动 clone `third_party/DynamixelSDK`。
+
+### 3. 创建环境
+
+基础 GELLO 与 PiPER-X 功能：
 
 ```bash
 uv python install 3.11
-uv venv --python 3.11
-uv pip install -r requirements.txt
-uv pip install -e .
+uv sync
 ```
 
-当前仓库的 GELLO 串口驱动还依赖 ROBOTIS DynamixelSDK。将其克隆到项目约定路径并以可编辑模式安装：
+按需安装可选功能：
 
 ```bash
-mkdir -p third_party
-git clone https://github.com/ROBOTIS-GIT/DynamixelSDK.git third_party/DynamixelSDK
-uv pip install -e third_party/DynamixelSDK/python
+uv sync --extra camera
+uv sync --extra simulation
+uv sync --extra robots
+uv sync --extra full
 ```
 
-后续命令统一使用 `.venv/bin/python`，因此不要求激活虚拟环境。如需激活，可执行：
-
-```bash
-source .venv/bin/activate
-```
+`uv sync` 会根据 `uv.lock` 创建或更新 `.venv`，无需手动执行 `uv venv`、`uv pip install -e .` 或激活环境。日常命令统一通过 `uv run` 执行。
 
 ### 4. 配置串口权限
-
-将当前用户加入 Ubuntu 的 `dialout` 组：
 
 ```bash
 sudo usermod -aG dialout "$USER"
 ```
 
-随后注销并重新登录，使组权限生效。重新连接 GELLO 后查看稳定的设备路径：
+注销并重新登录后，重新连接 GELLO，检查稳定设备路径和权限：
 
 ```bash
 ls -l /dev/serial/by-id/
-```
-
-检查当前终端是否已有读写权限：
-
-```bash
 test -r /dev/ttyUSB0 && test -w /dev/ttyUSB0 && echo "GELLO 权限正常"
 ```
 
-推荐始终使用 `/dev/serial/by-id/...` 路径，而不是可能随插拔变化的 `/dev/ttyUSB0`。
+推荐使用 `/dev/serial/by-id/...`，避免 `/dev/ttyUSB0` 随插拔顺序变化。
 
-### 5. 确认 GELLO 端口配置
+### 5. 确认端口映射
 
-串口路径必须存在于 `gello/agents/gello_agent.py` 的 `PORT_CONFIG_MAP` 中。当前 PiPER-X 工作区使用的配置键为：
+串口路径必须存在于 `src/gello/agents/gello_agent.py` 的 `PORT_CONFIG_MAP` 中。若设备路径不同，需要为实际硬件配置舵机 ID、offset、方向系数和夹爪端点；不要只替换未知串口路径后直接启动机械臂。
 
-```text
-/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBM4Z46-if00-port0
-```
-
-如果你的 `by-id` 路径不同，需要先在 `PORT_CONFIG_MAP` 中新增对应配置，并根据实际 GELLO 确认舵机 ID、关节 offset、方向系数和夹爪端点；不要只把未知设备路径替换进去就直接控制机械臂。具体配置含义见[开发与调试手册](docs/DEVELOPMENT.md#5-关键数据映射)。
-
-### 6. 进行只读 GELLO 验证
-
-将下面的串口路径替换成 `ls -l /dev/serial/by-id/` 查到且已写入 `PORT_CONFIG_MAP` 的路径：
+### 6. 只读验证 GELLO
 
 ```bash
-.venv/bin/python experiments/read_gello_joints.py \
+uv run gello read \
   --gello-port /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBM4Z46-if00-port0
 ```
 
-正常情况下会输出 J1～J6 的弧度、角度和归一化夹爪值。需要供脚本解析的输出时可添加 `--json`：
+机器可读输出：
 
 ```bash
-.venv/bin/python experiments/read_gello_joints.py \
+uv run gello read \
   --gello-port /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBM4Z46-if00-port0 \
   --json
 ```
 
-确认读取稳定后按 `Ctrl+C` 或等待单次读取结束。若出现 `-3001`，说明 Dynamixel 状态包接收超时，请先检查供电、串联线、公共 GND、波特率、舵机 ID 和串口占用；完整排查清单见[开发与调试手册](docs/DEVELOPMENT.md#6-dynamixel-通信与--3001)。
+## （4）命令行入口
 
-## （4）PiPER-X 跟随
+查看所有命令：
 
-PiPER-X 跟随需要同时准备本仓库和同级的 `agilexrobotics` 项目。先在终端 1 配置 CAN 并启动从臂服务：
+```bash
+uv run gello --help
+uv run gello follow --help
+```
+
+| 命令 | 功能 | 依赖范围 |
+| --- | --- | --- |
+| `read` | 读取 GELLO 关节和夹爪 | 基础 |
+| `follow` | GELLO 控制 PiPER-X | 基础 |
+| `follow-record` | 跟随并记录原始 episode | 基础 |
+| `movejs` | 通过 PiPER-X ZMQ/JS 定位 | 基础 |
+| `launch-yaml` | 从 YAML 启动工作流 | 基础或配置对应 extra |
+| `launch-nodes` | 启动机器人 ZMQ 服务 | `robots` |
+| `camera-server`、`camera-client` | RealSense 服务和显示 | `camera` |
+| `quick-run`、`run-env` | 上游通用工作流 | `full` |
+
+`experiments/*.py` 暂时保留为兼容包装器，现有外部脚本仍可运行；新增使用和开发统一面向 `gello` CLI。
+
+## （5）PiPER-X 最小联调
+
+终端 1 启动 `agilexrobotics` 服务：
 
 ```bash
 cd /path/to/agilexrobotics
@@ -142,58 +148,58 @@ uv run ag status
 uv run ag-gello-server --hz 50
 ```
 
-确认服务端已经监听后，在终端 2 启动 GELLO 客户端：
+终端 2 启动 GELLO 客户端：
 
 ```bash
 cd /path/to/gello_software
-.venv/bin/python experiments/piper_x_follow.py \
+uv run gello follow \
   --gello-port /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBM4Z46-if00-port0 \
   --start-joints 0 0 0 0 0 0 \
   --hz 50
 ```
 
-`--start-joints` 必须与机械臂当前姿态和所选对齐方式匹配，不能在不了解其含义时照抄零值进行真实运动。推荐在完整 `robot/` 工作区使用父目录的 `start_gello_follow.sh`，由脚本执行设备检查、姿态对齐和退出回零。完整流程见[开发与调试手册](docs/DEVELOPMENT.md#1-一键启动-piper-x-跟随)。
+示例中的零位不能直接用于未知姿态。必须先理解启动对齐和 `--start-joints`，具体步骤见[开发与调试手册](docs/DEVELOPMENT.md)。
 
-## （5）开发检查
-
-需要运行测试和静态检查时，先安装开发依赖：
+## （6）开发检查
 
 ```bash
-uv pip install -r requirements_dev.txt
+uv sync --dev
+uv run pytest -q
+uv run ruff check src/gello/cli.py src/gello/paths.py tests experiments
 ```
 
-当前本地扩展的测试可执行：
-
-```bash
-.venv/bin/python -m pytest tests
-```
-
-更详细的文件职责、命令参数、数据记录、YAM 工作流和串口故障处理统一记录在[开发与调试手册](docs/DEVELOPMENT.md)中。
-
-## （6）常见问题
+## （7）常见问题
 
 ### 1. `ModuleNotFoundError: dynamixel_sdk`
 
-说明 DynamixelSDK 尚未安装到当前 `.venv`，或命令使用了系统 Python。回到项目目录执行：
+确保命令在项目根目录通过 uv 执行，并恢复锁定环境：
 
 ```bash
-uv pip install -e third_party/DynamixelSDK/python
-.venv/bin/python -c "import dynamixel_sdk; print(dynamixel_sdk.__file__)"
+uv sync --frozen
+uv run python -c "import dynamixel_sdk; print(dynamixel_sdk.__file__)"
 ```
 
 ### 2. 串口存在但没有权限
-
-确认用户属于 `dialout` 组，并在加入组后完成注销和重新登录：
 
 ```bash
 groups
 ls -l /dev/serial/by-id/
 ```
 
+加入 `dialout` 后必须注销并重新登录。
+
 ### 3. 串口被占用
 
-同一时间只能有一个程序访问 GELLO 串口。使用以下命令查看占用进程，不要在未确认进程用途时直接结束它：
+同一时间只能有一个程序访问 GELLO 串口：
 
 ```bash
 lsof /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBM4Z46-if00-port0
 ```
+
+### 4. 找不到 MuJoCo Menagerie
+
+```bash
+git submodule update --init --recursive
+```
+
+也可以通过 `GELLO_MENAGERIE_ROOT=/absolute/path/to/mujoco_menagerie` 使用外部资产目录。

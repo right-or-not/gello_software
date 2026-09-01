@@ -36,13 +36,13 @@ PiPER-X 方向系数：1 1 -1 -1 1 1
 
 | 内容              | 文件                                                        | 功能                                                        |
 | --------------- | --------------------------------------------------------- | --------------------------------------------------------- |
-| GELLO 状态读取      | `experiments/read_gello_joints.py`                        | 打印映射后的 J1～J6 和归一化夹爪值                                      |
-| PiPER-X 跟随客户端   | `experiments/piper_x_follow.py`                           | 完成七维映射、启动对齐、ZMQ 命令发送和跟随                                   |
-| PiPER-X 跟随记录客户端 | `experiments/piper_x_follow_record.py`                    | 保持相同跟随逻辑，并将最终 action 和实际 observation 异步写入原始 JSONL episode |
-| PiPER-X JS 定位   | `experiments/piper_x_movejs.py`                           | 通过现有 ZMQ/JS 会话分步移动到零位或指定目标                                |
-| 原始 episode 记录器  | `gello/data_utils/raw_episode_recorder.py`                | 管理 session、manifest、异步队列、保存、丢弃和异常 `.partial` 文件           |
-| 串口通信保护          | `gello/dynamixel/driver.py`                               | 检查初始化失败、连续超时、反馈过期和串口占用                                    |
-| 串口释放路径          | `gello/agents/gello_agent.py`、`gello/robots/dynamixel.py` | 退出时停止后台线程并释放 FTDI 串口                                      |
+| GELLO 状态读取      | `gello read`                        | 打印映射后的 J1～J6 和归一化夹爪值                                      |
+| PiPER-X 跟随客户端   | `gello follow`                           | 完成七维映射、启动对齐、ZMQ 命令发送和跟随                                   |
+| PiPER-X 跟随记录客户端 | `gello follow-record`                    | 保持相同跟随逻辑，并将最终 action 和实际 observation 异步写入原始 JSONL episode |
+| PiPER-X JS 定位   | `gello movejs`                           | 通过现有 ZMQ/JS 会话分步移动到零位或指定目标                                |
+| 原始 episode 记录器  | `src/gello/data_utils/raw_episode_recorder.py`                | 管理 session、manifest、异步队列、保存、丢弃和异常 `.partial` 文件           |
+| 串口通信保护          | `src/gello/dynamixel/driver.py`                               | 检查初始化失败、连续超时、反馈过期和串口占用                                    |
+| 串口释放路径          | `src/gello/agents/gello_agent.py`、`src/gello/robots/dynamixel.py` | 退出时停止后台线程并释放 FTDI 串口                                      |
 | 完整自动流程          | `../start_gello_follow.sh`                                | 配置 CAN、检查设备、读取 GELLO、JS 校准、跟随和安全回零                        |
 | 跟随与数据记录流程       | `../start_data_record.sh`                                 | 保留同一安全流程，并调用独立记录客户端；不修改普通跟随入口                             |
 
@@ -54,31 +54,24 @@ gello_software/
 ├── docs/
 │   ├── DEVELOPMENT.md
 │   └── README_OFFICIAL.md
-├── requirements.txt
-├── setup.py
+├── pyproject.toml
+├── uv.lock
 ├── configs/
 │   ├── templates/
 │   ├── yam_auto_generated.yaml
 │   └── yam_auto_generated_sim.yaml
-├── experiments/
-│   ├── read_gello_joints.py
-│   ├── piper_x_follow.py
-│   ├── piper_x_follow_record.py
-│   ├── piper_x_movejs.py
-│   ├── launch_yaml.py
-│   ├── run_env.py
-│   └── quick_run.py
+├── experiments/                 # 旧文件名兼容包装器
 ├── scripts/
 │   ├── generate_yam_config.py
 │   └── gello_get_offset.py
-├── gello/
+├── src/gello/
+│   ├── cli.py
+│   ├── commands/
 │   ├── agents/gello_agent.py
 │   ├── dynamixel/driver.py
-│   ├── robots/dynamixel.py
 │   ├── data_utils/raw_episode_recorder.py
-│   ├── env.py
 │   └── zmq_core/robot_node.py
-└── third_party/DynamixelSDK/
+└── third_party/mujoco_menagerie/ # 仿真资产 submodule
 ```
 
 ### 3. 文件功能
@@ -89,15 +82,15 @@ gello_software/
 | `experiments/piper_x_follow.py`            | 连接 GELLO 和 PiPER-X ZMQ 服务，执行方向映射、启动检查和连续跟随           |
 | `experiments/piper_x_follow_record.py`     | 使用独立入口执行相同跟随，并在最终 action 下发和 observation 返回位置生成原始样本  |
 | `experiments/piper_x_movejs.py`            | 在服务端已运行时，通过同一 JS 会话分步定位并验收误差                         |
-| `gello/data_utils/raw_episode_recorder.py` | 使用后台线程将有界队列中的样本写入 JSONL，正常保存时原子改名，异常退出时保留 `.partial` |
+| `src/gello/data_utils/raw_episode_recorder.py` | 使用后台线程将有界队列中的样本写入 JSONL，正常保存时原子改名，异常退出时保留 `.partial` |
 | `experiments/launch_yaml.py`               | 按 YAML 创建官方 GELLO agent/robot，支持单臂、双臂和保存接口           |
 | `scripts/generate_yam_config.py`           | 检测 YAM GELLO 偏移并生成硬件、仿真 YAML                         |
 | `scripts/gello_get_offset.py`              | 根据已知姿态计算 GELLO 关节 offset                             |
-| `gello/agents/gello_agent.py`              | 保存串口对应的 ID、offset、sign 和 gripper 配置                  |
-| `gello/robots/dynamixel.py`                | 将原始电机角度转换为 GELLO 状态并归一化夹爪                            |
-| `gello/dynamixel/driver.py`                | 管理 FTDI、Group Sync Read、通信超时、读取线程和资源释放               |
-| `gello/env.py`                             | 按目标频率执行 robot command 并组合 observation                |
-| `gello/zmq_core/robot_node.py`             | 实现 GELLO Robot 的 ZMQ 客户端和服务端协议                       |
+| `src/gello/agents/gello_agent.py`              | 保存串口对应的 ID、offset、sign 和 gripper 配置                  |
+| `src/gello/robots/dynamixel.py`                | 将原始电机角度转换为 GELLO 状态并归一化夹爪                            |
+| `src/gello/dynamixel/driver.py`                | 管理 FTDI、Group Sync Read、通信超时、读取线程和资源释放               |
+| `src/gello/env.py`                             | 按目标频率执行 robot command 并组合 observation                |
+| `src/gello/zmq_core/robot_node.py`             | 实现 GELLO Robot 的 ZMQ 客户端和服务端协议                       |
 
 ## （2）安装与设备检查
 
@@ -106,15 +99,10 @@ gello_software/
 ```bash
 cd /path/to/gello_software
 uv python install 3.11
-uv venv --python 3.11
-uv pip install -r requirements.txt
-uv pip install -e .
-mkdir -p third_party
-git clone https://github.com/ROBOTIS-GIT/DynamixelSDK.git third_party/DynamixelSDK
-uv pip install -e third_party/DynamixelSDK/python
+uv sync
 ```
 
-当前仓库的 `.gitmodules` 保留了上游子模块信息，但 Git 索引中没有对应 gitlink，因此 `git submodule update --init --recursive` 不会在全新 clone 中下载 DynamixelSDK。首次安装应使用上面的显式 `git clone` 命令。后续文档统一使用 `.venv/bin/python`，因此不要求提前激活虚拟环境。
+基础依赖包含 PyPI 版本的 DynamixelSDK，不再手动维护 SDK 源码。相机、仿真、第三方机器人分别使用 `uv sync --extra camera`、`uv sync --extra simulation` 和 `uv sync --extra robots`；完整上游环境使用 `uv sync --extra full`。MuJoCo 模型不是 Python 包，需要另行执行 `git submodule update --init --recursive`。
 
 ### 2. 查看 GELLO 串口
 
@@ -142,11 +130,11 @@ lsof /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBM4Z46-if00-port0
 | -------------------------------------- | ------------------------------ | ------------------------- |
 | `../start_gello_follow.sh`             | 自动完成设备检查、JS 校准、跟随和 Ctrl+C 安全回零 | 是，推荐入口                    |
 | `../start_data_record.sh`              | 完成相同安全跟随流程并记录第一阶段原始数据          | 是，数据采集入口                  |
-| `experiments/read_gello_joints.py`     | 读取 GELLO 当前 J1～J6 和 gripper    | 否                         |
-| `experiments/piper_x_follow.py`        | 手动启动 GELLO 到 PiPER-X 的跟随客户端    | 是，需要服务端                   |
-| `experiments/piper_x_follow_record.py` | 手动启动带原始记录的 PiPER-X 跟随客户端       | 是，需要服务端                   |
-| `experiments/piper_x_movejs.py`        | 通过已运行的服务端让 PiPER-X JS 定位       | 是，需要服务端                   |
-| `experiments/launch_yaml.py`           | 运行官方 YAML 工作流                  | 取决于 YAML，不用于当前 PiPER-X 跟随 |
+| `uv run gello read`     | 读取 GELLO 当前 J1～J6 和 gripper    | 否                         |
+| `uv run gello follow`        | 手动启动 GELLO 到 PiPER-X 的跟随客户端    | 是，需要服务端                   |
+| `uv run gello follow-record` | 手动启动带原始记录的 PiPER-X 跟随客户端       | 是，需要服务端                   |
+| `uv run gello movejs`        | 通过已运行的服务端让 PiPER-X JS 定位       | 是，需要服务端                   |
+| `uv run gello launch-yaml`           | 运行官方 YAML 工作流                  | 取决于 YAML，不用于当前 PiPER-X 跟随 |
 
 ### 1. 一键启动 PiPER-X 跟随
 
@@ -227,7 +215,7 @@ cd ~/projects
 
 ```bash
 cd ~/projects/gello_software
-.venv/bin/python experiments/read_gello_joints.py \
+uv run gello read \
   --gello-port /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBM4Z46-if00-port0
 ```
 
@@ -244,7 +232,7 @@ cd ~/projects/gello_software
 完整示例：
 
 ```bash
-.venv/bin/python experiments/read_gello_joints.py \
+uv run gello read \
   --gello-port /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBM4Z46-if00-port0 \
   --baudrate 57600 \
   --json
@@ -263,7 +251,7 @@ uv run ag-gello-server
 
 ```bash
 cd ~/projects/gello_software
-.venv/bin/python experiments/piper_x_follow.py \
+uv run gello follow \
   --gello-port /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBM4Z46-if00-port0 \
   --start-joints 0 0 0 0 0 0
 ```
@@ -292,7 +280,7 @@ GELLO and PiPER-X aligned; teleoperation started (Ctrl-C to stop)
 完整示例：
 
 ```bash
-.venv/bin/python experiments/piper_x_follow.py \
+uv run gello follow \
   --gello-port /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBM4Z46-if00-port0 \
   --hostname 127.0.0.1 \
   --robot-port 6001 \
@@ -314,13 +302,13 @@ GELLO and PiPER-X aligned; teleoperation started (Ctrl-C to stop)
 移动到零位并保持当前夹爪：
 
 ```bash
-.venv/bin/python experiments/piper_x_movejs.py
+uv run gello movejs
 ```
 
 移动到指定目标：
 
 ```bash
-.venv/bin/python experiments/piper_x_movejs.py \
+uv run gello movejs \
   --joints 0 0 0 0 0 0 \
   --gripper 0.5
 ```
@@ -346,7 +334,7 @@ GELLO and PiPER-X aligned; teleoperation started (Ctrl-C to stop)
 ### 1. 生成 YAM 配置
 
 ```bash
-.venv/bin/python scripts/generate_yam_config.py \
+uv run python scripts/generate_yam_config.py \
   --port /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBM4Z46-if00-port0
 ```
 
@@ -363,7 +351,7 @@ GELLO and PiPER-X aligned; teleoperation started (Ctrl-C to stop)
 ### 2. 根据已知姿态计算 offset
 
 ```bash
-.venv/bin/python scripts/gello_get_offset.py \
+uv run python scripts/gello_get_offset.py \
   --port /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBM4Z46-if00-port0 \
   --start-joints 0 0 0 0 0 0 \
   --joint-signs 1 -1 -1 -1 1 1 \
@@ -377,14 +365,14 @@ GELLO and PiPER-X aligned; teleoperation started (Ctrl-C to stop)
 单臂：
 
 ```bash
-.venv/bin/python experiments/launch_yaml.py \
+uv run gello launch-yaml \
   --left-config-path configs/yam_auto_generated.yaml
 ```
 
 双臂：
 
 ```bash
-.venv/bin/python experiments/launch_yaml.py \
+uv run gello launch-yaml \
   --left-config-path configs/left.yaml \
   --right-config-path configs/right.yaml
 ```

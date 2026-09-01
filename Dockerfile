@@ -3,7 +3,7 @@ FROM nvidia/cuda:11.8.0-devel-ubuntu22.04
 WORKDIR /gello
 
 # Set environment variables first (less likely to change)
-ENV PYTHONPATH=/gello:/gello/third_party/oculus_reader/
+ENV PYTHONPATH=/gello/src
 
 # Group apt updates and installs together
 RUN apt update && apt install -y \
@@ -18,5 +18,7 @@ RUN apt update && apt install -y \
 RUN echo "alias python=python3" >> ~/.bashrc
 
 # Install Python dependencies
-COPY requirements.txt /gello
-RUN pip install -r requirements.txt
+COPY pyproject.toml uv.lock README.md LICENSE /gello/
+RUN pip install uv && uv sync --frozen --no-dev --no-install-project
+COPY src /gello/src
+RUN uv sync --frozen --no-dev

@@ -1,13 +1,8 @@
-import sys
 import unittest
-from pathlib import Path
 
 import numpy as np
 
-EXPERIMENTS_DIR = Path(__file__).resolve().parents[1] / "experiments"
-sys.path.insert(0, str(EXPERIMENTS_DIR))
-
-from piper_x_follow_record import _sample_from_cycle
+from gello.commands.follow_record import _sample_from_cycle
 
 
 class PiperXFollowRecordTest(unittest.TestCase):
