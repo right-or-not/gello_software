@@ -98,11 +98,14 @@ gello_software/
 
 ```bash
 cd /path/to/gello_software
-uv python install 3.11
-uv sync
+requested_version="$(<.python-version)"
+resolved_version="$(pyenv latest -k "$requested_version")"
+pyenv install -s "$resolved_version"
+interpreter="$(PYENV_VERSION="$resolved_version" pyenv which python)"
+UV_NO_MANAGED_PYTHON=1 uv sync --frozen --python "$interpreter"
 ```
 
-基础依赖包含 PyPI 版本的 DynamixelSDK，不再手动维护 SDK 源码。相机、仿真、第三方机器人分别使用 `uv sync --extra camera`、`uv sync --extra simulation` 和 `uv sync --extra robots`；完整上游环境使用 `uv sync --extra full`。MuJoCo 模型不是 Python 包，需要另行执行 `git submodule update --init --recursive`。
+pyenv 负责安装和选择 Python，uv 只负责 `.venv`、锁定依赖和命令运行；不要让 uv 为本项目另行下载解释器。基础依赖包含 PyPI 版本的 DynamixelSDK，不再手动维护 SDK 源码。相机、仿真、第三方机器人分别使用 `uv sync --extra camera`、`uv sync --extra simulation` 和 `uv sync --extra robots`；完整上游环境使用 `uv sync --extra full`。MuJoCo 模型不是 Python 包，需要另行执行 `git submodule update --init --recursive`。
 
 ### 2. 查看 GELLO 串口
 

@@ -19,7 +19,7 @@
 
 - Ubuntu 22.04 或更新版本
 - Git、curl、USB 串口访问权限和基础编译工具
-- Python 3.11；`.python-version` 固定项目版本
+- pyenv 和 Python 3.11；`.python-version` 声明项目版本
 - uv
 - GELLO 主手及 FTDI/Dynamixel 串口适配器
 - PiPER-X 功能额外需要独立的 `agilexrobotics` 服务与 USB-CAN
@@ -27,7 +27,7 @@
 
 ## （3）快速开始
 
-### 1. 安装系统工具与 uv
+### 1. 安装系统工具、pyenv 与 uv
 
 ```bash
 sudo apt update
@@ -63,11 +63,14 @@ DynamixelSDK 已作为锁定的 uv/PyPI 依赖安装，不再需要手动 clone 
 
 ### 3. 创建环境
 
-基础 GELLO 与 PiPER-X 功能：
+Python 由 pyenv 安装和选择，uv 负责 `.venv` 和依赖。基础 GELLO 与 PiPER-X 功能：
 
 ```bash
-uv python install 3.11
-uv sync
+requested_version="$(<.python-version)"
+resolved_version="$(pyenv latest -k "$requested_version")"
+pyenv install -s "$resolved_version"
+interpreter="$(PYENV_VERSION="$resolved_version" pyenv which python)"
+UV_NO_MANAGED_PYTHON=1 uv sync --frozen --python "$interpreter"
 ```
 
 按需安装可选功能：
@@ -79,7 +82,7 @@ uv sync --extra robots
 uv sync --extra full
 ```
 
-`uv sync` 会根据 `uv.lock` 创建或更新 `.venv`，无需手动执行 `uv venv`、`uv pip install -e .` 或激活环境。日常命令统一通过 `uv run` 执行。
+显式传递 pyenv 解释器并设置 `UV_NO_MANAGED_PYTHON=1`，可以防止 uv 自行下载 Python。`uv sync` 会根据 `uv.lock` 创建或更新 `.venv`，无需手动执行 `uv venv`、`uv pip install -e .` 或激活环境。日常命令统一通过 `uv run` 执行。
 
 ### 4. 配置串口权限
 
