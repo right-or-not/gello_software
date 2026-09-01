@@ -4,7 +4,7 @@
 
 > 本仓库基于官方 GELLO 软件扩展，当前主要用于读取七自由度 GELLO 主手，并通过 ZMQ 控制 AgileX PiPER-X 六轴机械臂和 AGX 夹爪。
 
-## 0. 项目基本信息
+## （1）项目基本信息
 
 当前数据流：
 
@@ -32,7 +32,7 @@ PiPER-X 方向系数：1 1 -1 -1 1 1
 
 50 Hz 是当前 Python 控制循环的默认目标频率，不代表 GELLO 串口每秒一定产生 50 组不同的硬件反馈。可通过 `--hz` 显式修改。
 
-### 0.1 当前新增和调整的功能
+### 1. 当前新增和调整的功能
 
 | 内容              | 文件                                                        | 功能                                                        |
 | --------------- | --------------------------------------------------------- | --------------------------------------------------------- |
@@ -46,7 +46,7 @@ PiPER-X 方向系数：1 1 -1 -1 1 1
 | 完整自动流程          | `../start_gello_follow.sh`                                | 配置 CAN、检查设备、读取 GELLO、JS 校准、跟随和安全回零                        |
 | 跟随与数据记录流程       | `../start_data_record.sh`                                 | 保留同一安全流程，并调用独立记录客户端；不修改普通跟随入口                             |
 
-### 0.2 主要文件结构
+### 2. 主要文件结构
 
 ```text
 gello_software/
@@ -81,7 +81,7 @@ gello_software/
 └── third_party/DynamixelSDK/
 ```
 
-### 0.3 文件功能
+### 3. 文件功能
 
 | 文件                                         | 功能                                                   |
 | ------------------------------------------ | ---------------------------------------------------- |
@@ -99,9 +99,9 @@ gello_software/
 | `gello/env.py`                             | 按目标频率执行 robot command 并组合 observation                |
 | `gello/zmq_core/robot_node.py`             | 实现 GELLO Robot 的 ZMQ 客户端和服务端协议                       |
 
-## 1. 安装与设备检查
+## （2）安装与设备检查
 
-### 1.1 安装 Python 环境
+### 1. 安装 Python 环境
 
 ```bash
 cd /path/to/gello_software
@@ -116,7 +116,7 @@ uv pip install -e third_party/DynamixelSDK/python
 
 当前仓库的 `.gitmodules` 保留了上游子模块信息，但 Git 索引中没有对应 gitlink，因此 `git submodule update --init --recursive` 不会在全新 clone 中下载 DynamixelSDK。首次安装应使用上面的显式 `git clone` 命令。后续文档统一使用 `.venv/bin/python`，因此不要求提前激活虚拟环境。
 
-### 1.2 查看 GELLO 串口
+### 2. 查看 GELLO 串口
 
 ```bash
 ls -l /dev/serial/by-id/
@@ -136,7 +136,7 @@ lsof /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBM4Z46-if00-port0
 
 同一时间只能有一个 DynamixelDriver 占用该串口。不要同时运行状态读取命令和跟随客户端。
 
-## 2. 常用命令
+## （3）常用命令
 
 | 命令                                     | 功能                             | 是否控制 PiPER-X              |
 | -------------------------------------- | ------------------------------ | ------------------------- |
@@ -148,7 +148,7 @@ lsof /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBM4Z46-if00-port0
 | `experiments/piper_x_movejs.py`        | 通过已运行的服务端让 PiPER-X JS 定位       | 是，需要服务端                   |
 | `experiments/launch_yaml.py`           | 运行官方 YAML 工作流                  | 取决于 YAML，不用于当前 PiPER-X 跟随 |
 
-### 2.1 一键启动 PiPER-X 跟随
+### 1. 一键启动 PiPER-X 跟随
 
 推荐命令：
 
@@ -221,7 +221,7 @@ cd ~/projects
 | `--record-queue-size` | 后台异步写盘队列容量          | `500`                         |
 | `--start-recording`   | 对齐完成后立即开始 episode 0 | 关闭                            |
 
-### 2.2 读取 GELLO 当前状态
+### 2. 读取 GELLO 当前状态
 
 推荐命令：
 
@@ -250,7 +250,7 @@ cd ~/projects/gello_software
   --json
 ```
 
-### 2.3 手动启动 PiPER-X 跟随客户端
+### 3. 手动启动 PiPER-X 跟随客户端
 
 先在终端 1 启动 PiPER-X 服务端：
 
@@ -307,7 +307,7 @@ GELLO and PiPER-X aligned; teleoperation started (Ctrl-C to stop)
 
 `--absolute-leader` 是一键脚本完成预对齐后使用的模式。手动启动且没有提前完成绝对对齐时，通常不要添加。
 
-### 2.4 通过现有 JS 服务定位 PiPER-X
+### 4. 通过现有 JS 服务定位 PiPER-X
 
 该工具不读取 GELLO，只连接已经运行的 `ag-gello-server`。服务端未启动时不能单独使用。
 
@@ -339,11 +339,11 @@ GELLO and PiPER-X aligned; teleoperation started (Ctrl-C to stop)
 
 该工具在 5 秒内重复发送最终目标并检查真实反馈；任一关节超出容差时会明确报错。
 
-## 3. 官方/YAM 通用命令
+## （4）官方/YAM 通用命令
 
 本节不是当前 PiPER-X 的推荐入口。不要与 `start_gello_follow.sh` 同时运行，否则会争用 GELLO 串口。
 
-### 3.1 生成 YAM 配置
+### 1. 生成 YAM 配置
 
 ```bash
 .venv/bin/python scripts/generate_yam_config.py \
@@ -360,7 +360,7 @@ GELLO and PiPER-X aligned; teleoperation started (Ctrl-C to stop)
 | `--output-path`          | 硬件 YAML 输出     | `configs/yam_auto_generated.yaml`     |
 | `--sim-output-path`      | 仿真 YAML 输出     | `configs/yam_auto_generated_sim.yaml` |
 
-### 3.2 根据已知姿态计算 offset
+### 2. 根据已知姿态计算 offset
 
 ```bash
 .venv/bin/python scripts/gello_get_offset.py \
@@ -372,7 +372,7 @@ GELLO and PiPER-X aligned; teleoperation started (Ctrl-C to stop)
 
 该命令只计算并打印推荐 offset，不会自动写回 `gello_agent.py`。
 
-### 3.3 使用 YAML 启动官方工作流
+### 3. 使用 YAML 启动官方工作流
 
 单臂：
 
@@ -391,9 +391,9 @@ GELLO and PiPER-X aligned; teleoperation started (Ctrl-C to stop)
 
 加上 `--use-save-interface` 可以启用官方键盘保存接口。YAML 中的 `hz` 决定该工作流频率；当前 `yam_auto_generated.yaml` 为 `30 Hz`，与 PiPER-X 客户端默认的 `50 Hz` 无关。
 
-## 4. 关键数据映射
+## （5）关键数据映射
 
-### 4.1 两层方向系数
+### 1. 两层方向系数
 
 ```text
 Dynamixel 原始角度
@@ -405,7 +405,7 @@ Dynamixel 原始角度
 
 第一层位于 `PORT_CONFIG_MAP`，用于将电机安装方向转换为 GELLO 坐标；第二层位于 `piper_x_follow.py`，用于将 GELLO 坐标转换为 PiPER-X 坐标。两层不能合并理解，也不应在排查通信问题时随意修改。
 
-### 4.2 `--start-joints`
+### 2. `--start-joints`
 
 该参数主要用于选择 Dynamixel 多圈角度最接近哪一个 `2π` 分支，不是让 PiPER-X 自动运动到这些数值。
 
@@ -413,7 +413,7 @@ Dynamixel 原始角度
 - 一键脚本先读取 GELLO 并完成 JS 对齐，再传入方向映射前的 GELLO J1～J6。
 - 不要对传入值提前重复应用 PiPER-X `joint-signs`。
 
-### 4.3 gripper
+### 3. gripper
 
 GELLO 读取侧根据 `gripper_config=(ID, open_deg, closed_deg)` 归一化原始角度，其中两个端点分别对应 `0` 和 `1`。PiPER-X 跟随链路将第七维独立传输，不与 J1～J6 的单步缩放耦合。主手端点方向由当前 `gripper_config` 标定决定；从臂服务端使用下面的 AGX 宽度约定。
 
@@ -425,7 +425,7 @@ PiPER-X 服务端最终采用：
 AGX width_m = gripper × 0.1
 ```
 
-## 5. Dynamixel 通信与 `-3001`
+## （6）Dynamixel 通信与 `-3001`
 
 `warning, comm failed: -3001` 表示 SDK 没有在超时时间内收到状态包：
 
@@ -454,9 +454,9 @@ COMM_RX_TIMEOUT = -3001
 - 退出时主动停止读取线程并释放串口。
 - 串口被占用时只报错，不自动杀死其他进程。
 
-只有 2.2 的只读命令能够稳定输出后，才应启动 PiPER-X 跟随。
+只有“常用命令”一章第 2 节的只读命令能够稳定输出后，才应启动 PiPER-X 跟随。
 
-## 6. 运行注意事项
+## （7）运行注意事项
 
 - 同一时间只运行一个访问 GELLO FTDI 串口的进程。
 - PiPER-X 推荐使用父目录一键脚本，不要混用官方 YAM YAML 工作流。

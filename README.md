@@ -110,7 +110,7 @@ test -r /dev/ttyUSB0 && test -w /dev/ttyUSB0 && echo "GELLO 权限正常"
 /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBM4Z46-if00-port0
 ```
 
-如果你的 `by-id` 路径不同，需要先在 `PORT_CONFIG_MAP` 中新增对应配置，并根据实际 GELLO 确认舵机 ID、关节 offset、方向系数和夹爪端点；不要只把未知设备路径替换进去就直接控制机械臂。具体配置含义见[开发与调试手册](docs/DEVELOPMENT.md#4-关键数据映射)。
+如果你的 `by-id` 路径不同，需要先在 `PORT_CONFIG_MAP` 中新增对应配置，并根据实际 GELLO 确认舵机 ID、关节 offset、方向系数和夹爪端点；不要只把未知设备路径替换进去就直接控制机械臂。具体配置含义见[开发与调试手册](docs/DEVELOPMENT.md#5-关键数据映射)。
 
 ### 6. 进行只读 GELLO 验证
 
@@ -129,7 +129,7 @@ test -r /dev/ttyUSB0 && test -w /dev/ttyUSB0 && echo "GELLO 权限正常"
   --json
 ```
 
-确认读取稳定后按 `Ctrl+C` 或等待单次读取结束。若出现 `-3001`，说明 Dynamixel 状态包接收超时，请先检查供电、串联线、公共 GND、波特率、舵机 ID 和串口占用；完整排查清单见[开发与调试手册](docs/DEVELOPMENT.md#5-dynamixel-通信与--3001)。
+确认读取稳定后按 `Ctrl+C` 或等待单次读取结束。若出现 `-3001`，说明 Dynamixel 状态包接收超时，请先检查供电、串联线、公共 GND、波特率、舵机 ID 和串口占用；完整排查清单见[开发与调试手册](docs/DEVELOPMENT.md#6-dynamixel-通信与--3001)。
 
 ## （4）PiPER-X 跟随
 
@@ -152,7 +152,7 @@ cd /path/to/gello_software
   --hz 50
 ```
 
-`--start-joints` 必须与机械臂当前姿态和所选对齐方式匹配，不能在不了解其含义时照抄零值进行真实运动。推荐在完整 `robot/` 工作区使用父目录的 `start_gello_follow.sh`，由脚本执行设备检查、姿态对齐和退出回零。完整流程见[开发与调试手册](docs/DEVELOPMENT.md#21-一键启动-piper-x-跟随)。
+`--start-joints` 必须与机械臂当前姿态和所选对齐方式匹配，不能在不了解其含义时照抄零值进行真实运动。推荐在完整 `robot/` 工作区使用父目录的 `start_gello_follow.sh`，由脚本执行设备检查、姿态对齐和退出回零。完整流程见[开发与调试手册](docs/DEVELOPMENT.md#1-一键启动-piper-x-跟随)。
 
 ## （5）开发检查
 
